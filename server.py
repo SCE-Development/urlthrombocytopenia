@@ -8,7 +8,6 @@ import prometheus_client
 import uvicorn
 from queue import Queue
 from threading import Thread
-from fastapi import Query 
 
 from modules.args import get_args
 from modules.generate_alias import generate_alias
@@ -74,12 +73,7 @@ async def create_url(request: Request):
         raise HTTPException(status_code=HttpResponse.INVALID_ARGUMENT_EXCEPTION.code)
 
 @app.get("/list")
-async def get_urls(
-    search: Optional[str] = Query(None),
-    page: int = Query(0),
-    sort_by: str = Query("created_at"),
-    order: str = Query("DESC")
-):
+async def get_urls(search: Optional[str] = None, page: int = 0, sort_by: str = "created_at", order: str = "DESC"):
     valid_sort_attributes = {"id", "url", "alias", "created_at", "used"}
     if order not in {"DESC", "ASC"}:
         raise HTTPException(status_code=400, detail="Invalid order")
