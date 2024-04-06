@@ -73,13 +73,18 @@ async def create_url(request: Request):
         raise HTTPException(status_code=HttpResponse.INVALID_ARGUMENT_EXCEPTION.code)
 
 @app.get("/list")
-async def get_urls(search: Optional[str] = None, page: int = 0):
+async def get_urls(search: Optional[str] = None, page: int = 0, sort_by: str = "created_at", order: str = "DESC"):
+    valid_sort_attributes = {"id", "url", "alias", "created_at", "used"}
+    if order not in {"DESC", "ASC"}:
+        raise HTTPException(status_code=400, detail="Invalid order")
+    if sort_by not in valid_sort_attributes:
+        raise HTTPException(status_code=400, detail="Invalid sorting attribute")
     if page < 0:
         raise HTTPException(status_code=400, detail="Invalid page number")
     if search and not search.isalnum():
         raise HTTPException(status_code=400, detail=f'search term "{search}" is invalid. only alphanumeric chars are allowed')
     with MetricsHandler.query_time.labels("list").time():
-        urls = sqlite_helpers.get_urls(DATABASE_FILE, page, search=search)
+        urls = sqlite_helpers.get_urls(DATABASE_FILE, page, search=search, sort_by=sort_by, order=order)
         total_urls = sqlite_helpers.get_number_of_entries(DATABASE_FILE, search=search)
         return {"data": urls, "total": total_urls, "rows_per_page": sqlite_helpers.ROWS_PER_PAGE}
 

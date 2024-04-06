@@ -50,7 +50,7 @@ def insert_url(sqlite_file: str, url: str, alias: str):
         logger.exception("Inserting url had an error")
         return None
 
-def get_urls(sqlite_file, page=0, search=None):
+def get_urls(sqlite_file, page=0, search=None, sort_by="created_at", order="DESC"):
     db = sqlite3.connect(sqlite_file)
     cursor = db.cursor()
     
@@ -60,11 +60,11 @@ def get_urls(sqlite_file, page=0, search=None):
         SELECT * FROM urls 
         WHERE LOWER(alias) LIKE LOWER('%{search}%') 
         OR LOWER(url) LIKE LOWER('%{search}%')
-        ORDER BY created_at DESC
+        ORDER BY {sort_by} {order}
         LIMIT {ROWS_PER_PAGE} OFFSET {offset}
         """
     else:
-        sql = f"SELECT * FROM urls ORDER BY created_at DESC LIMIT {ROWS_PER_PAGE} OFFSET {offset}"
+        sql = f"SELECT * FROM urls ORDER BY {sort_by} {order} LIMIT {ROWS_PER_PAGE} OFFSET {offset}"
     cursor.execute(sql)
     
     result = cursor.fetchall()
