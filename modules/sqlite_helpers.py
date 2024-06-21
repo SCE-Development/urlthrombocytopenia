@@ -17,7 +17,7 @@ def maybe_create_table(sqlite_file: str) -> bool:
             url TEXT NOT NULL, 
             alias TEXT NOT NULL, 
             created_at DATETIME NOT NULL,
-            expiration_date DATETIME NULL,
+            expiration_date DATETIME DEFAULT NULL,
             used INTEGER DEFAULT 1);
         """
 
@@ -34,7 +34,7 @@ def maybe_create_table(sqlite_file: str) -> bool:
         logger.exception("Unable to create urls table")
         return False
 
-def insert_url(sqlite_file: str, url: str, alias: str, expiration_date: datetime):
+def insert_url(sqlite_file: str, url: str, alias: str, expiration_date: datetime = None):
     db = sqlite3.connect(sqlite_file)
     cursor = db.cursor()
     timestamp = datetime.now()
@@ -45,7 +45,7 @@ def insert_url(sqlite_file: str, url: str, alias: str, expiration_date: datetime
         cursor.execute(sql, val)
         db.commit()
         return timestamp
-    except sqlite3.IntegrityError:
+    except sqlite3.IntegrityError as e:
         return None
     except Exception:
         logger.exception("Inserting url had an error")
