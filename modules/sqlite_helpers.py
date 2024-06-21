@@ -17,6 +17,7 @@ def maybe_create_table(sqlite_file: str) -> bool:
             url TEXT NOT NULL, 
             alias TEXT NOT NULL, 
             created_at DATETIME NOT NULL,
+            expiration_date DATETIME NULL,
             used INTEGER DEFAULT 1);
         """
 
@@ -33,14 +34,14 @@ def maybe_create_table(sqlite_file: str) -> bool:
         logger.exception("Unable to create urls table")
         return False
 
-def insert_url(sqlite_file: str, url: str, alias: str):
+def insert_url(sqlite_file: str, url: str, alias: str, expiration_date: datetime):
     db = sqlite3.connect(sqlite_file)
     cursor = db.cursor()
     timestamp = datetime.now()
 
     try:
-        sql = "INSERT INTO urls(url, alias, created_at) VALUES (?, ?, ?)"
-        val = (url, alias, timestamp)
+        sql = "INSERT INTO urls(url, alias, created_at, expiration_date) VALUES (?, ?, ?, ?)"
+        val = (url, alias, timestamp, expiration_date)
         cursor.execute(sql, val)
         db.commit()
         return timestamp
@@ -76,7 +77,8 @@ def get_urls(sqlite_file, page=0, search=None, sort_by="created_at", order="DESC
                 "url": row[1],
                 "alias": row[2],
                 "created_at": row[3],
-                "used": row[4],
+                "expiration_date": row[4],
+                "used": row[5]
             }
             url_array.append(url_data)
         except KeyError:
@@ -92,7 +94,6 @@ def get_url(sqlite_file: str, alias: str): #return the string for url entry for 
         cursor.execute(sql, (alias,))
         result = cursor.fetchone()
 
-        #delete the entry if it has been stored for over a year
         if not result or maybe_delete_expired_url(sqlite_file, result):
             return None
         else:
@@ -118,10 +119,26 @@ def delete_url(sqlite_file: str, alias: str): #delete entry in the database from
 def maybe_delete_expired_url(sqlite_file, sqlite_row) -> bool: #returns True if url expired and deleted, otherwise False
     db = sqlite3.connect(sqlite_file)
     cursor = db.cursor()
+    current = datetime.now()
+    expiration_datetime_str = sqlite_row[4]
 
-    year_ago_date = datetime.now() - timedelta(days=365)
     result_datetime_str = sqlite_row[3].split(".")[0]  # Remove fractional seconds
     result_datetime = datetime.strptime(result_datetime_str, "%Y-%m-%d %H:%M:%S")
+
+    #copied code for condition that expiration date has passed
+    expiration_datetime = None
+    if sqlite_row[4] is not None:
+        expiration_datetime_str = sqlite_row[4].split(".")[0]
+        expiration_datetime_str = expiration_datetime_str.replace('T', ' ')
+        expiration_datetime = datetime.strptime(expiration_datetime_str, "%Y-%m-%d %H:%M:%S")
+
+        if current > expiration_datetime:
+            sql = "DELETE FROM urls WHERE alias = ?"
+            cursor.execute(sql, (sqlite_row[2], ))
+            db.commit()
+            return True
+
+    year_ago_date = current - timedelta(days=365)
     if result_datetime < year_ago_date:
         sql = "DELETE FROM urls WHERE alias = ?"
         cursor.execute(sql, (sqlite_row[2], ))

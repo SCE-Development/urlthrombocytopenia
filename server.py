@@ -3,6 +3,7 @@ from fastapi import FastAPI, Request, HTTPException, Response
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+from datetime import datetime
 import time
 import prometheus_client
 import uvicorn
@@ -47,9 +48,19 @@ async def create_url(request: Request):
     urljson = await request.json()
     logging.debug(f"/create_url called with body: {urljson}")
     alias = None
-
+    expiration_date = None
+    
     try:
         alias = urljson.get('alias')
+
+        #get EPOCH expiration date
+        expire_time = urljson.get('epoch_expiration')
+
+        # Assuming the user input an expiration_date, convert from EPOCH to DATETIME
+        if expire_time is not None:
+            expiration_object = datetime.fromtimestamp(expire_time)
+            expiration_date = expiration_object.strftime('%Y-%m-%dT%H:%M:%S.%f')
+
         if alias is None:
             if args.disable_random_alias:
                 raise KeyError("alias must be specified")
@@ -59,10 +70,10 @@ async def create_url(request: Request):
             raise ValueError("alias must only contain alphanumeric characters")
 
         with MetricsHandler.query_time.labels("create").time():
-            response = sqlite_helpers.insert_url(DATABASE_FILE, urljson['url'], alias)
+            response = sqlite_helpers.insert_url(DATABASE_FILE, urljson['url'], alias, expiration_date)
             if response is not None:
                 MetricsHandler.url_count.inc(1)
-                return { "url": urljson['url'], "alias": alias, "created_at": response}
+                return { "url": urljson['url'], "alias": alias, "created_at": response, "expiration_date": expiration_date}
             else:
                 raise HTTPException(status_code=HttpResponse.CONFLICT.code )
     except KeyError:
@@ -93,7 +104,7 @@ async def get_url(alias: str):
     logging.debug(f"/find called with alias: {alias}")
     with MetricsHandler.query_time.labels("find").time():
         url_output = sqlite_helpers.get_url(DATABASE_FILE, alias)
-
+        
     if url_output is None:
         raise HTTPException(status_code=HttpResponse.NOT_FOUND.code)
     alias_queue.put(alias)
