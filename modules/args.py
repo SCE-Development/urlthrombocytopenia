@@ -6,8 +6,8 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--database-file-path",
-        required=True,
-        help="path to sqlite database file"
+        help="path to sqlite database file",
+        default="test.db"
     )
     parser.add_argument(
         "--host",

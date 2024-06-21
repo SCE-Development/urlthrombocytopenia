@@ -2,6 +2,7 @@ from typing import Optional
 from fastapi import FastAPI, Request, HTTPException, Response
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, AnyHttpUrl
 import logging
 from datetime import datetime
 import time
@@ -9,6 +10,7 @@ import prometheus_client
 import uvicorn
 from queue import Queue
 from threading import Thread
+from http import HTTPStatus
 
 from modules.args import get_args
 from modules.generate_alias import generate_alias
@@ -17,6 +19,37 @@ from modules.constants import HttpResponse, http_code_to_enum
 from modules.metrics import MetricsHandler
 from modules.sqlite_helpers import increment_used_column
 
+
+class CreateRequest(BaseModel):
+    """Request schema"""
+    url: AnyHttpUrl
+    alias: Optional[str] = None
+    expiration_epoch: Optional[str] = None
+
+
+class CreateResponse(BaseModel):
+    """Response schema for create request"""
+    url: AnyHttpUrl
+    alias: str
+    created_at: datetime
+    expiration_date: Optional[datetime] = None
+
+
+class ListItem(BaseModel):
+    """A single list item in a list response"""
+    id: int
+    url: AnyHttpUrl
+    alias: str
+    created_at: datetime
+    expiration_date: Optional[datetime] = None
+    used: int
+
+
+class ListResponse(BaseModel):
+    """List response for searching for aliases"""
+    data: list[ListItem]
+    total: int
+    rows_per_page: int
 
 app = FastAPI()
 args = get_args()
@@ -44,60 +77,56 @@ async def track_response_codes(request: Request, call_next):
     return response
 
 @app.post("/create_url")
-async def create_url(request: Request):
-    urljson = await request.json()
-    logging.debug(f"/create_url called with body: {urljson}")
-    alias = None
-    expiration_date = None
-    
-    try:
-        alias = urljson.get('alias')
+async def create_url(request: CreateRequest) -> CreateResponse:
+    """Create an alias from a URL if the alias is provided it will be used"""
+    # Assuming the user input an expiration_date, convert from EPOCH to DATETIME
+    if request.expiration_epoch is not None:
+        expiration_date = datetime.fromtimestamp(
+            request.expiration_epoch).strftime('%Y-%m-%dT%H:%M:%S.%f')
+    else:
+        expiration_date = None
+        
+    if request.alias is None:
+        if args.disable_random_alias:
+            raise HTTPException(HTTPStatus.INVALID_ARGUMENT_EXCEPTION, 
+                                detail="alias must be specified")
+        else:
+            alias = generate_alias(request.url)
+    else:
+        alias = request.alias
 
-        #get EPOCH expiration date
-        expire_time = urljson.get('epoch_expiration')
+    if not alias.isalnum():
+        raise HTTPException(HTTPStatus.INVALID_ARGUMENT_EXCEPTION,
+                             detail="alias must only contain alphanumeric characters")
 
-        # Assuming the user input an expiration_date, convert from EPOCH to DATETIME
-        if expire_time is not None:
-            expiration_object = datetime.fromtimestamp(expire_time)
-            expiration_date = expiration_object.strftime('%Y-%m-%dT%H:%M:%S.%f')
+    with MetricsHandler.query_time.labels("create").time():
+        timestamp = sqlite_helpers.insert_url(DATABASE_FILE, request.url, alias, expiration_date)
+        if timestamp is not None:
+            MetricsHandler.url_count.inc(1)
+            return CreateResponse(url=request.url, alias=alias, created_at=timestamp, expiration_date=expiration_date)
+        else:
+            raise HTTPException(status_code=HTTPStatus.CONFLICT)
 
-        if alias is None:
-            if args.disable_random_alias:
-                raise KeyError("alias must be specified")
-            else:
-                alias = generate_alias(urljson['url'])
-        if not alias.isalnum():
-            raise ValueError("alias must only contain alphanumeric characters")
-
-        with MetricsHandler.query_time.labels("create").time():
-            response = sqlite_helpers.insert_url(DATABASE_FILE, urljson['url'], alias, expiration_date)
-            if response is not None:
-                MetricsHandler.url_count.inc(1)
-                return { "url": urljson['url'], "alias": alias, "created_at": response, "expiration_date": expiration_date}
-            else:
-                raise HTTPException(status_code=HttpResponse.CONFLICT.code )
-    except KeyError:
-        logging.exception("returning 400 due to missing key")
-        raise HTTPException(status_code=HttpResponse.BAD_REQUEST.code)
-    except ValueError:
-        logging.exception(f"returning 422 due to invalid alias of \"{alias}\"")
-        raise HTTPException(status_code=HttpResponse.INVALID_ARGUMENT_EXCEPTION.code)
 
 @app.get("/list")
-async def get_urls(search: Optional[str] = None, page: int = 0, sort_by: str = "created_at", order: str = "DESC"):
+async def get_urls(search: Optional[str] = None, page: int = 0, sort_by: str = "created_at", order: str = "DESC") -> ListResponse:
     valid_sort_attributes = {"id", "url", "alias", "created_at", "used"}
     if order not in {"DESC", "ASC"}:
-        raise HTTPException(status_code=400, detail="Invalid order")
+        raise HTTPException(HTTPStatus.BAD_REQUEST, detail="Invalid order")
     if sort_by not in valid_sort_attributes:
-        raise HTTPException(status_code=400, detail="Invalid sorting attribute")
+        raise HTTPException(HTTPStatus.BAD_REQUEST, detail="Invalid sorting attribute")
     if page < 0:
-        raise HTTPException(status_code=400, detail="Invalid page number")
+        raise HTTPException(HTTPStatus.BAD_REQUEST, detail="Invalid page number")
     if search and not search.isalnum():
-        raise HTTPException(status_code=400, detail=f'search term "{search}" is invalid. only alphanumeric chars are allowed')
+        raise HTTPException(HTTPStatus.BAD_REQUEST, detail=f'search term "{search}" is invalid. only alphanumeric chars are allowed')
     with MetricsHandler.query_time.labels("list").time():
         urls = sqlite_helpers.get_urls(DATABASE_FILE, page, search=search, sort_by=sort_by, order=order)
         total_urls = sqlite_helpers.get_number_of_entries(DATABASE_FILE, search=search)
-        return {"data": urls, "total": total_urls, "rows_per_page": sqlite_helpers.ROWS_PER_PAGE}
+        response = ListResponse(
+            data=list(map(lambda item: ListItem(**item), urls)),
+            total=total_urls,
+            rows_per_page=sqlite_helpers.ROWS_PER_PAGE)
+        return response
 
 @app.get("/find/{alias}")
 async def get_url(alias: str):
