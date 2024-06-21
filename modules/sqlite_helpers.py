@@ -45,7 +45,7 @@ def insert_url(sqlite_file: str, url: str, alias: str, expiration_date: datetime
         cursor.execute(sql, val)
         db.commit()
         return timestamp
-    except sqlite3.IntegrityError as e:
+    except sqlite3.IntegrityError:
         return None
     except Exception:
         logger.exception("Inserting url had an error")
