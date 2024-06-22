@@ -15,6 +15,7 @@ import modules.sqlite_helpers as sqlite_helpers
 from modules.constants import HttpResponse, http_code_to_enum
 from modules.metrics import MetricsHandler
 from modules.sqlite_helpers import increment_used_column
+from modules.cache import MappingLRUCache
 
 
 app = FastAPI()
@@ -29,6 +30,8 @@ app.add_middleware(
 )
 
 metrics_handler = MetricsHandler.instance()
+
+mapping = MappingLRUCache(args.cacheSize)
 
 #maybe create the table if it doesnt already exist
 DATABASE_FILE = args.database_file_path
@@ -91,11 +94,15 @@ async def get_urls(search: Optional[str] = None, page: int = 0, sort_by: str = "
 @app.get("/find/{alias}")
 async def get_url(alias: str):
     logging.debug(f"/find called with alias: {alias}")
-    with MetricsHandler.query_time.labels("find").time():
-        url_output = sqlite_helpers.get_url(DATABASE_FILE, alias)
+    url_output = mapping.find(alias) #try to find url in cache
 
-    if url_output is None:
-        raise HTTPException(status_code=HttpResponse.NOT_FOUND.code)
+    if url_output is None: #if not in cache, pull directly from database
+        with MetricsHandler.query_time.labels("find").time():
+            url_output = sqlite_helpers.get_url(DATABASE_FILE, alias)
+        if url_output is None:
+            raise HTTPException(status_code=HttpResponse.NOT_FOUND.code)
+        mapping.add(alias, url_output) #else, adds url and alias to cache
+
     alias_queue.put(alias)
     return RedirectResponse(url_output)
 
