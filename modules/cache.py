@@ -11,7 +11,7 @@ class MappingLRUCache:
     def find(self, alias):
         if alias in self.dict:
             self.dict.move_to_end(alias, last=False) #move alias to front of cache
-            logging.debug("alias: '" + alias + "' is grabbed from mapping")
+            logging.debug(f"alias: '{alias}' is grabbed from mapping")
             MetricsHandler.cache_hits.inc()
             return self.dict[alias]
         MetricsHandler.cache_misses.inc()
