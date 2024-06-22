@@ -21,6 +21,21 @@ class Metrics(enum.Enum):
         prometheus_client.Counter,
         ['path', 'code'],
     )
+    CACHE_SIZE = (
+        "cache_size",
+        "Size of LRU cache for /find",
+        prometheus_client.Counter
+    ) 
+    CACHE_HITS = (
+        "cache_hits",
+        "Number of times cache is used",
+        prometheus_client.Counter,
+    )
+    CACHE_MIESSES = (
+        "cache_misses",
+        "Number of times cahes is not used",
+        prometheus_client.Counter,
+    )
 
     def __init__(self, title, description, prometheus_type, labels=()):
         # we use the above default value for labels because it matches what's used

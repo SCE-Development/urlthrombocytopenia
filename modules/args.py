@@ -32,5 +32,11 @@ def get_args():
         default=0,
         help="increase logging verbosity; can be used multiple times",
     )
+    parser.add_argument(
+        "--cacheSize",
+        type=int,
+        default=100,
+        help="max size of LRU cache"
+    )
     
     return parser.parse_args()
