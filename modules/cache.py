@@ -19,9 +19,9 @@ class MappingLRUCache:
 
     def add(self, alias, url_output):
         if len(self.dict) == self.size: 
-            data = self.dict.popitem() #remove least used alias if size is 100
+            data = self.dict.popitem() #remove least used alias if size reaches max
             logging.debug("alias: '" + data[0] + "' has been removed from cache")
         else:
-            MetricsHandler.cache_size.inc()
+            MetricsHandler.cache_size.inc() #if alias isn't removed, size is increased
         self.dict[alias] = url_output
         logging.debug("set alias: '" + alias + "' to mapping")
