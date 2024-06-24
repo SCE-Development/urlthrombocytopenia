@@ -1,6 +1,6 @@
 from typing import Optional
 from fastapi import FastAPI, Request, HTTPException, Response
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 import time
@@ -15,24 +15,27 @@ import modules.sqlite_helpers as sqlite_helpers
 from modules.constants import HttpResponse, http_code_to_enum
 from modules.metrics import MetricsHandler
 from modules.sqlite_helpers import increment_used_column
+from modules.qr_code import QRCode
 
 
 app = FastAPI()
 args = get_args()
 alias_queue = Queue()
+qr_code_cache = QRCode(args.qr_code_directory_path)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['*'],
-    allow_methods=['*'],
-    allow_headers=['*'],
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 metrics_handler = MetricsHandler.instance()
 
-#maybe create the table if it doesnt already exist
+# maybe create the table if it doesnt already exist
 DATABASE_FILE = args.database_file_path
 sqlite_helpers.maybe_create_table(DATABASE_FILE)
+
 
 # middleware to get metrics on HTTP response codes
 @app.middleware("http")
@@ -42,6 +45,7 @@ async def track_response_codes(request: Request, call_next):
     MetricsHandler.http_code.labels(request.url.path, status_code).inc()
     return response
 
+
 @app.post("/create_url")
 async def create_url(request: Request):
     urljson = await request.json()
@@ -49,31 +53,37 @@ async def create_url(request: Request):
     alias = None
 
     try:
-        alias = urljson.get('alias')
+        alias = urljson.get("alias")
         if alias is None:
             if args.disable_random_alias:
                 raise KeyError("alias must be specified")
             else:
-                alias = generate_alias(urljson['url'])
+                alias = generate_alias(urljson["url"])
         if not alias.isalnum():
             raise ValueError("alias must only contain alphanumeric characters")
 
         with MetricsHandler.query_time.labels("create").time():
-            response = sqlite_helpers.insert_url(DATABASE_FILE, urljson['url'], alias)
+            response = sqlite_helpers.insert_url(DATABASE_FILE, urljson["url"], alias)
             if response is not None:
                 MetricsHandler.url_count.inc(1)
-                return { "url": urljson['url'], "alias": alias, "created_at": response}
+                return {"url": urljson["url"], "alias": alias, "created_at": response}
             else:
-                raise HTTPException(status_code=HttpResponse.CONFLICT.code )
+                raise HTTPException(status_code=HttpResponse.CONFLICT.code)
     except KeyError:
         logging.exception("returning 400 due to missing key")
         raise HTTPException(status_code=HttpResponse.BAD_REQUEST.code)
     except ValueError:
-        logging.exception(f"returning 422 due to invalid alias of \"{alias}\"")
+        logging.exception(f'returning 422 due to invalid alias of "{alias}"')
         raise HTTPException(status_code=HttpResponse.INVALID_ARGUMENT_EXCEPTION.code)
 
+
 @app.get("/list")
-async def get_urls(search: Optional[str] = None, page: int = 0, sort_by: str = "created_at", order: str = "DESC"):
+async def get_urls(
+    search: Optional[str] = None,
+    page: int = 0,
+    sort_by: str = "created_at",
+    order: str = "DESC",
+):
     valid_sort_attributes = {"id", "url", "alias", "created_at", "used"}
     if order not in {"DESC", "ASC"}:
         raise HTTPException(status_code=400, detail="Invalid order")
@@ -82,11 +92,21 @@ async def get_urls(search: Optional[str] = None, page: int = 0, sort_by: str = "
     if page < 0:
         raise HTTPException(status_code=400, detail="Invalid page number")
     if search and not search.isalnum():
-        raise HTTPException(status_code=400, detail=f'search term "{search}" is invalid. only alphanumeric chars are allowed')
+        raise HTTPException(
+            status_code=400,
+            detail=f'search term "{search}" is invalid. only alphanumeric chars are allowed',
+        )
     with MetricsHandler.query_time.labels("list").time():
-        urls = sqlite_helpers.get_urls(DATABASE_FILE, page, search=search, sort_by=sort_by, order=order)
+        urls = sqlite_helpers.get_urls(
+            DATABASE_FILE, page, search=search, sort_by=sort_by, order=order
+        )
         total_urls = sqlite_helpers.get_number_of_entries(DATABASE_FILE, search=search)
-        return {"data": urls, "total": total_urls, "rows_per_page": sqlite_helpers.ROWS_PER_PAGE}
+        return {
+            "data": urls,
+            "total": total_urls,
+            "rows_per_page": sqlite_helpers.ROWS_PER_PAGE,
+        }
+
 
 @app.get("/find/{alias}")
 async def get_url(alias: str):
@@ -100,19 +120,41 @@ async def get_url(alias: str):
     return RedirectResponse(url_output)
 
 
+@app.get("/qr/{alias}")
+async def get_qr_code(alias: str):
+    logging.debug(f"/qr called with alias: {alias}")
+    # Find if a qr code for the specified alias already exists
+    qr_code_path = qr_code_cache.find(alias)
+    if qr_code_path is None:
+        with MetricsHandler.query_time.labels("qr").time():
+            url = sqlite_helpers.get_url(DATABASE_FILE, alias)
+
+        if url is None:
+            raise HTTPException(status_code=HttpResponse.NOT_FOUND.code)
+        # If the qr code does not exist but the alias exists in the sqlite database, generate a new qr code
+        qr_code_path = qr_code_cache.add(alias, url)
+
+    alias_queue.put(alias)
+    return FileResponse(qr_code_path)
+
+
 @app.post("/delete/{alias}")
 async def delete_url(alias: str):
     logging.debug(f"/delete called with alias: {alias}")
     with MetricsHandler.query_time.labels("delete").time():
-      if(sqlite_helpers.delete_url(DATABASE_FILE, alias)):
-          return {"message": "URL deleted successfully"}
-      else:
-          raise HTTPException(status_code=HttpResponse.NOT_FOUND.code)
+        if sqlite_helpers.delete_url(DATABASE_FILE, alias):
+            return {"message": "URL deleted successfully"}
+        else:
+            raise HTTPException(status_code=HttpResponse.NOT_FOUND.code)
+
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
     status_code_enum = http_code_to_enum[exc.status_code]
-    return HTMLResponse(content=status_code_enum.content, status_code=status_code_enum.code)
+    return HTMLResponse(
+        content=status_code_enum.content, status_code=status_code_enum.code
+    )
+
 
 @app.get("/metrics")
 def get_metrics():
@@ -121,20 +163,22 @@ def get_metrics():
         content=prometheus_client.generate_latest(),
     )
 
+
 logging.Formatter.converter = time.gmtime
 
 logging.basicConfig(
     # in mondo we trust
     format="%(asctime)s.%(msecs)03dZ %(levelname)s:%(name)s:%(message)s",
     datefmt="%Y-%m-%dT%H:%M:%S",
-    level= logging.ERROR - (args.verbose*10),
+    level=logging.ERROR - (args.verbose * 10),
 )
+
 
 def consumer():
     while True:
         alias = alias_queue.get()
-        if alias is None:  
-            break  
+        if alias is None:
+            break
         try:
             with MetricsHandler.query_time.labels("increment_used").time():
                 increment_used_column(DATABASE_FILE, alias)
@@ -144,7 +188,6 @@ def consumer():
             alias_queue.task_done()
 
 
-    
 # we have a separate __name__ check here due to how FastAPI starts
 # a server. the file is first ran (where __name__ == "__main__")
 # and then calls `uvicorn.run`. the call to run() reruns the file,
