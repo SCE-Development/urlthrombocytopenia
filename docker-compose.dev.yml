@@ -8,6 +8,7 @@ services:
     command:
       - --database-file-path=/tmp/urldatabase.db
       - --port=8000
+      - --qr-code-directory-path=./generated_qr_codes
       - -vvv
     ports:
       - 8000:8000
