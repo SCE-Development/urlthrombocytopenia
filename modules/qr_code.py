@@ -5,9 +5,9 @@ import os
 
 
 class QRCode:
-    def __init__(self, qr_code_directory: str) -> None:
+    def __init__(self, qr_code_directory: str, cache_size: int) -> None:
         """
-        __init__ Initializes the qr_code_directory and mapping fields, and creates the qr_code_directory if it does not exist.
+        __init__ Initializes the qr_code_directory, cache_size, and mapping fields, and creates the qr_code_directory if it does not exist.
 
         Args:
             qr_code_directory (str): The path to store the generated qr codes.
@@ -15,6 +15,7 @@ class QRCode:
         self.qr_code_directory = qr_code_directory
         if not os.path.exists(self.qr_code_directory):
             os.mkdir(self.qr_code_directory)
+        self.cache_size = cache_size
         self.mapping = {}
 
     def add(self, alias: str, url: str) -> str:
@@ -22,6 +23,7 @@ class QRCode:
         add Generates a new QR Code and saves it in the qr_code_directory.
 
         Generates a qr code based on the url passed as an argument. Inserts the SCE logo in the center of the qr code.
+        Calls the clear() method if self.mapping exceeds the cache_size.
 
         Args:
             alias (str): The alias associated with the qr code url.
@@ -30,6 +32,9 @@ class QRCode:
         Returns:
             str: The filepath of the newly created qr code.
         """
+        # Call the clear() method if the number of qr codes generated exceeds the cache size
+        if len(self.mapping) >= self.cache_size:
+            self.clear()
         # Generate a new uuid string as the qr code filename
         filename = str(f"{uuid.uuid4()}.png")
         filepath = os.path.join(self.qr_code_directory, filename)
@@ -78,3 +83,11 @@ class QRCode:
             str: Returns the path to the alias if it exists and None if it does not exist.
         """
         return self.mapping[alias] if alias in self.mapping else None
+
+    def clear(self):
+        """
+        clear Removes all the generated qr codes from the qr_code_directory and clears the self.mapping dictionary to save disk space.
+        """
+        for alias in self.mapping:
+            os.remove(self.mapping.get(alias))
+        self.mapping.clear()
