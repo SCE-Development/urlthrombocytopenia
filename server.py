@@ -21,7 +21,7 @@ from modules.qr_code import QRCode
 app = FastAPI()
 args = get_args()
 alias_queue = Queue()
-qr_code_cache = QRCode(args.qr_code_directory_path)
+qr_code_cache = QRCode(args.qr_code_directory_path, args.qr_code_cache_size)
 
 app.add_middleware(
     CORSMiddleware,
@@ -162,6 +162,11 @@ def get_metrics():
         media_type="text/plain",
         content=prometheus_client.generate_latest(),
     )
+
+
+@app.on_event("shutdown")
+def signal_handler():
+    qr_code_cache.clear()
 
 
 logging.Formatter.converter = time.gmtime
