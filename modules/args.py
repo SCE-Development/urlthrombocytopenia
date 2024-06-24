@@ -38,5 +38,21 @@ def get_args():
         default=100,
         help="number of url redirects to store in memory. defaults to 100"
     )
+    parser.add_argument(
+        "--qr-code-cache-path",
+        required=True,
+        help="the location on disk to store generated qr code images"
+    )
+    parser.add_argument(
+        "--qr-code-cache-size",
+        type=int,
+        default=100,
+        help="maxmimum number of images to store on disk for qr codes. defaults to 100"
+    )
+    parser.add_argument(
+        "--qr-code-base-url",
+        required=True,
+        help="the base url path for the qr code image"
+    )
     
     return parser.parse_args()

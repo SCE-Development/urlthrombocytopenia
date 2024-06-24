@@ -1,6 +1,6 @@
 from typing import Optional
 from fastapi import FastAPI, Request, HTTPException, Response
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 import time
@@ -16,6 +16,7 @@ from modules.constants import HttpResponse, http_code_to_enum
 from modules.metrics import MetricsHandler
 from modules.sqlite_helpers import increment_used_column
 from modules.cache import Cache
+from modules.qr_code import QRCode
 
 
 app = FastAPI()
@@ -34,6 +35,11 @@ cache = Cache(args.cache_size)
 # maybe create the table if it doesnt already exist
 DATABASE_FILE = args.database_file_path
 sqlite_helpers.maybe_create_table(DATABASE_FILE)
+qr_code_cache = QRCode(
+  args.qr_code_base_url,
+  args.qr_code_cache_path,
+  args.qr_code_cache_size,
+)
 
 
 # middleware to get metrics on HTTP response codes
@@ -134,6 +140,25 @@ async def delete_url(alias: str):
         else:
             raise HTTPException(status_code=HttpResponse.NOT_FOUND.code)
 
+@app.get("/qr/{alias}") 
+async def qr(alias: str):
+    logging.debug(f"/qr code generation called with alias: {alias}")
+    with MetricsHandler.query_time.labels("qr").time():
+        maybe_image_data = qr_code_cache.find(alias)
+        if maybe_image_data is not None:
+            return FileResponse(
+            maybe_image_data,
+            media_type='image/jpeg',
+            )
+        
+        url_output = sqlite_helpers.get_url(DATABASE_FILE, alias)
+        if url_output is None:
+            raise HTTPException(status_code=HttpResponse.NOT_FOUND.code)
+        image_data = qr_code_cache.add(alias)
+        return FileResponse(
+            image_data,
+            media_type='image/jpeg',
+        )
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
@@ -150,6 +175,9 @@ def get_metrics():
         content=prometheus_client.generate_latest(),
     )
 
+@app.on_event("shutdown")
+def signal_handler():
+    qr_code_cache.clear()
 
 logging.Formatter.converter = time.gmtime
 
