@@ -17,8 +17,8 @@ def maybe_create_table(sqlite_file: str) -> bool:
             url TEXT NOT NULL, 
             alias TEXT NOT NULL, 
             created_at DATETIME NOT NULL,
-            expiration_date DATETIME DEFAULT NULL,
-            used INTEGER DEFAULT 1);
+            used INTEGER DEFAULT 1,
+            expiration_date DATETIME DEFAULT NULL);
         """
 
         create_index_query = """
@@ -77,8 +77,8 @@ def get_urls(sqlite_file, page=0, search=None, sort_by="created_at", order="DESC
                 "url": row[1],
                 "alias": row[2],
                 "created_at": row[3],
-                "expiration_date": row[4],
-                "used": row[5]
+                "used": row[4],
+                "expiration_date": row[5],
             }
             url_array.append(url_data)
         except KeyError:
