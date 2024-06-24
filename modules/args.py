@@ -30,6 +30,12 @@ def get_args():
         help="directory to store generated qr codes",
     )
     parser.add_argument(
+        "--qr-code-cache-size",
+        type=int,
+        required=True,
+        help="maximum number of qr codes to be stored",
+    )
+    parser.add_argument(
         "--verbose",
         "-v",
         action="count",

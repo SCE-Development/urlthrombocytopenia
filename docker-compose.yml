@@ -8,6 +8,7 @@ services:
     command:
       - --database-file-path=/tmp/urldatabase.db
       - --qr-code-directory-path=./generated_qr_codes
+      - --qr-code-cache-size=10
       - -vvv
     volumes:
       - cleezy_data:/tmp/

@@ -9,6 +9,7 @@ services:
       - --database-file-path=/tmp/urldatabase.db
       - --port=8000
       - --qr-code-directory-path=./generated_qr_codes
+      - --qr-code-cache-size=10
       - -vvv
     ports:
       - 8000:8000
