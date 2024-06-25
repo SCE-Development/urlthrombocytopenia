@@ -29,7 +29,7 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
-metrics_handler = MetricsHandler.instance()
+# metrics_handler = MetricsHandler.instance()
 
 cache = Cache(args.cache_size)
 
@@ -164,6 +164,7 @@ def consumer():
 # server uses
 if __name__ == "server":
     initial_url_count = sqlite_helpers.get_number_of_entries(DATABASE_FILE)
+    MetricsHandler.init()
     MetricsHandler.url_count.inc(initial_url_count)
     consumer_thread = Thread(target=consumer, daemon=True)
     consumer_thread.start()

@@ -24,7 +24,7 @@ class Metrics(enum.Enum):
     CACHE_SIZE = (
         "cache_size",
         "Size of LRU cache for /find",
-        prometheus_client.Counter
+        prometheus_client.Gauge,
     ) 
     CACHE_HITS = (
         "cache_hits",
@@ -48,11 +48,7 @@ class Metrics(enum.Enum):
 
 
 class MetricsHandler:
-    _instance = None
-
-    def __init__(self):
-        raise RuntimeError('Call MetricsHandler.instance() instead')
-
+    @classmethod
     def init(self) -> None:
         for metric in Metrics:
             setattr(
@@ -62,10 +58,3 @@ class MetricsHandler:
                     metric.title, metric.description, labelnames=metric.labels
                 ),
             )
-
-    @classmethod
-    def instance(cls):
-        if cls._instance is None:
-            cls._instance = cls.__new__(cls)
-            cls.init(cls)
-        return cls._instance
