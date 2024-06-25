@@ -25,3 +25,4 @@ class Cache:
         self.dict[alias] = url_output
         MetricsHandler.cache_size.set(len(self.dict))
         logging.debug("set alias: '" + alias + "' to mapping")
+        

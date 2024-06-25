@@ -95,13 +95,15 @@ async def get_urls(search: Optional[str] = None, page: int = 0, sort_by: str = "
 async def get_url(alias: str):
     logging.debug(f"/find called with alias: {alias}")
     url_output = cache.find(alias) #try to find url in cache
-
-    if url_output is None: #if not in cache, pull directly from database
-        with MetricsHandler.query_time.labels("find").time():
-            url_output = sqlite_helpers.get_url(DATABASE_FILE, alias)
-        if url_output is None:
-            raise HTTPException(status_code=HttpResponse.NOT_FOUND.code)
-        cache.add(alias, url_output) #else, adds url and alias to cache
+    if url_output is not None: 
+        alias_queue.put(alias)
+        return RedirectResponse(url_output)
+    
+    with MetricsHandler.query_time.labels("find").time():
+        url_output = sqlite_helpers.get_url(DATABASE_FILE, alias)
+    if url_output is None:
+        raise HTTPException(status_code=HttpResponse.NOT_FOUND.code)
+    cache.add(alias, url_output) #else, adds url and alias to cache
 
     alias_queue.put(alias)
     return RedirectResponse(url_output)
