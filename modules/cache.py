@@ -21,8 +21,7 @@ class Cache:
     def add(self, alias, url_output):
         if len(self.dict) == self.size: 
             data = self.dict.popitem() #remove least used alias if size reaches max
-            logging.debug(f"alias: '{data[0]}' has been removed from cache")
+            logging.debug(f"alias: {data[0]} has been removed from cache")
         self.dict[alias] = url_output
         MetricsHandler.cache_size.set(len(self.dict))
         logging.debug("set alias: '" + alias + "' to mapping")
-        
