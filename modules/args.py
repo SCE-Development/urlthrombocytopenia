@@ -32,5 +32,11 @@ def get_args():
         default=0,
         help="increase logging verbosity; can be used multiple times",
     )
+    parser.add_argument(
+        "--cache-size",
+        type=int,
+        default=100,
+        help="number of url redirects to store in memory. defaults to 100"
+    )
     
     return parser.parse_args()
