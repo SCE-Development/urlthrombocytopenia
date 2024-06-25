@@ -29,8 +29,6 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
-# metrics_handler = MetricsHandler.instance()
-
 cache = Cache(args.cache_size)
 
 #maybe create the table if it doesnt already exist
