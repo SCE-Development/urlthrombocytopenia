@@ -137,15 +137,7 @@ def maybe_delete_expired_url(sqlite_file, sqlite_row) -> bool: #returns True if 
             cursor.execute(sql, (sqlite_row[2], ))
             db.commit()
             return True
-
-    year_ago_date = current - timedelta(days=365)
-    if result_datetime < year_ago_date:
-        sql = "DELETE FROM urls WHERE alias = ?"
-        cursor.execute(sql, (sqlite_row[2], ))
-        db.commit()
-        return True
-    else:
-        return False
+    return False
     
 def get_number_of_entries(sqlite_file, search=None):
     db = sqlite3.connect(sqlite_file)
