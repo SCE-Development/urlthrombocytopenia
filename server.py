@@ -136,6 +136,8 @@ async def delete_url(alias: str):
     logging.debug(f"/delete called with alias: {alias}")
     with MetricsHandler.query_time.labels("delete").time():
         if sqlite_helpers.delete_url(DATABASE_FILE, alias):
+            qr_code_cache.delete(alias)
+            cache.delete(alias)
             return {"message": "URL deleted successfully"}
         else:
             raise HTTPException(status_code=HttpResponse.NOT_FOUND.code)

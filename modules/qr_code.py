@@ -37,11 +37,18 @@ class QRCode:
     def find(self, alias: str):
         return self.mapping.get(alias)
 
+    def delete(self, alias: str):
+        path = self.mapping.get(alias)
+        if alias in self.mapping:
+            self.mapping.pop(alias)
+        if os.path.exists(path):
+            os.remove(path)
+            logger.debug(f"removed qr code at {path} for alias {alias}")
+
     def clear(self):
         try: 
-            for alias, path in self.mapping.items():
-                if os.path.exists(path):
-                    os.remove(path)
+            for alias in self.mapping.keys():
+                self.delete(alias)
             self.mapping.clear()
             logger.debug("Cleared qr code folder")
         except Exception:

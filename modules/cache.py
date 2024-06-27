@@ -18,6 +18,13 @@ class Cache:
         MetricsHandler.cache_hits.inc()
         return self.dict[alias]
 
+    def delete(self, alias):
+        if alias not in self.dict:
+            logging.debug(f"alias {alias} was not found in cache")
+            return None
+        self.dict.pop(alias)
+        logging.debug(f"deleted {alias} from cache")
+
     def add(self, alias, url_output):
         if len(self.dict) == self.size: 
             data = self.dict.popitem() #remove least used alias if size reaches max
