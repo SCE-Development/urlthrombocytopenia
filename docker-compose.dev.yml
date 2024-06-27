@@ -7,6 +7,8 @@ services:
       dockerfile: Dockerfile
     command:
       - --database-file-path=/tmp/urldatabase.db
+      - --qr-code-cache-path=/tmp/
+      - --qr-code-base-url=http://localhost:8000/find
       - --port=8000
       - -vvv
     ports:
