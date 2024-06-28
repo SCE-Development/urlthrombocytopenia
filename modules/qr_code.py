@@ -1,9 +1,12 @@
-import qrcode
-import uuid
-import os
 import logging
+import os
+import uuid
+
+from PIL import Image
+import pyqrcode
 
 logger = logging.getLogger(__name__)
+
 
 class QRCode:
     def __init__(self, base_url, qr_cache_path, max_size) -> None:
@@ -13,17 +16,46 @@ class QRCode:
         self.max_size = max_size
 
     def add(self, alias: str):
-        try:    
-            if len(self.mapping) >= self.max_size: #removes files if exceeds size
-                remove_alias,remove_path = self.mapping.popitem()
+        try:
+            if len(self.mapping) >= self.max_size:  # removes files if exceeds size
+                remove_alias, remove_path = self.mapping.popitem()
                 os.remove(remove_path)
-                logger.debug(f"Removed qrcode with alias: {remove_alias} to free space.")
-                
-            url = os.path.join(self.base_url, alias) 
-            path = os.path.join(self.qr_cache_path, str(uuid.uuid4()) + ".jpg")
+                logger.debug(
+                    f"Removed qrcode with alias: {remove_alias} to free space."
+                )
 
-            img = qrcode.make(url)
-            img.save(path)
+            url = os.path.join(self.base_url, alias)
+            path = os.path.join(self.qr_cache_path, str(uuid.uuid4()) + ".png")
+
+            # Create a QR Code with high error tolerance (30%) to accommodate for the logo placed in the center
+            qrcode = pyqrcode.create(url, error="H")
+            # Save the generated QR Code
+            qrcode.png(path, scale=10)
+
+            # Open the saved QR Code to add the logo in the center
+            qrcode_image = Image.open(path)
+            qrcode_image = qrcode_image.convert("RGBA")
+
+            sce_logo = Image.open("/app/assets/SCE_logo.png")
+
+            qrcode_width, qrcode_height = qrcode_image.size
+            # Resize sce_logo to be 20% of the qr code's width and height
+            sce_logo_width = int(qrcode_width * 0.2)
+            sce_logo_height = int(qrcode_height * 0.2)
+            sce_logo = sce_logo.resize((sce_logo_width, sce_logo_height))
+
+            # Calculate the coordinates for the logo to be centered on the QR Code
+            top_left_x = int((qrcode_width / 2) - (sce_logo_width / 2))
+            top_left_y = int((qrcode_height / 2) - (sce_logo_height / 2))
+            bottom_right_x = int((qrcode_width / 2) + (sce_logo_width / 2))
+            bottom_right_y = int((qrcode_height / 2) + (sce_logo_height / 2))
+
+            box = [top_left_x, top_left_y, bottom_right_x, bottom_right_y]
+            # Place the logo in the center of the QR Code
+            qrcode_image.paste(sce_logo, box)
+            # Save the QR Code again after the logo has been added
+            qrcode_image.save(path, scale=10)
+
             self.mapping[alias] = path
 
             return path
@@ -46,7 +78,7 @@ class QRCode:
             logger.debug(f"removed qr code at {path} for alias {alias}")
 
     def clear(self):
-        try: 
+        try:
             for alias in self.mapping.keys():
                 self.delete(alias)
             self.mapping.clear()
