@@ -1,6 +1,7 @@
 import pyqrcode
 import uuid
 import os
+
 import logging
 from PIL import Image
 
@@ -35,7 +36,7 @@ class QRCode:
             qrcode_image = Image.open(path)
             qrcode_image = qrcode_image.convert("RGBA")
 
-            sce_logo = Image.open("./assets/SCE_logo.png")
+            sce_logo = Image.open("/app/assets/SCE_logo.png")
 
             qrcode_width, qrcode_height = qrcode_image.size
             # Resize sce_logo to be 20% of the qr code's width and height

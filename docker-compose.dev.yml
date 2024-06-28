@@ -17,6 +17,7 @@ services:
       - cleezy_data_dev:/tmp/
       - ./server.py:/app/server.py
       - ./modules:/app/modules
+      - ./assets:/app/assets
     environment:
       - WATCHFILES_FORCE_POLLING=true
   prometheus:
