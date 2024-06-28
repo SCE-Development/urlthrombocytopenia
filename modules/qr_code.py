@@ -1,9 +1,9 @@
-import pyqrcode
-import uuid
-import os
-
 import logging
+import os
+import uuid
+
 from PIL import Image
+import pyqrcode
 
 logger = logging.getLogger(__name__)
 
