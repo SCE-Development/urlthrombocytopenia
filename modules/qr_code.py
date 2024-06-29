@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class QRCode:
-    def __init__(self, base_url, qr_cache_path, max_size, qr_image_path) -> None:
+    def __init__(self, base_url, qr_cache_path, max_size, qr_image_path = None) -> None:
         self.mapping = {}
         self.base_url = base_url
         self.qr_cache_path = qr_cache_path
