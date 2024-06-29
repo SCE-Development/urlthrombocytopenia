@@ -1,4 +1,4 @@
-version: '3.7'
+version: "3.7"
 services:
   app:
     container_name: cleezy-app
@@ -9,6 +9,7 @@ services:
       - --database-file-path=/tmp/urldatabase.db
       - --qr-code-cache-path=/tmp/
       - --qr-code-base-url=https://sce.sjsu.edu/s
+      - --qr-code-center-image-path=/app/assets/SCE_logo.png
       - -vvv
     volumes:
       - cleezy_data:/tmp/
@@ -21,7 +22,7 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
+      - "--config.file=/etc/prometheus/prometheus.yml"
   nginx:
     container_name: cleezy-nginx
     image: nginx:alpine
@@ -30,7 +31,6 @@ services:
 
 volumes:
   cleezy_data:
-
 
 networks:
   default:
