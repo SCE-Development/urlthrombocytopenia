@@ -54,5 +54,10 @@ def get_args():
         required=True,
         help="the base url path for the qr code image"
     )
+    parser.add_argument(
+        "--qr-code-center-image-path",
+        default=None,
+        help="the base url path for the center image in qr code"
+    )
     
     return parser.parse_args()
