@@ -9,11 +9,12 @@ logger = logging.getLogger(__name__)
 
 
 class QRCode:
-    def __init__(self, base_url, qr_cache_path, max_size) -> None:
+    def __init__(self, base_url, qr_cache_path, max_size, qr_image_path) -> None:
         self.mapping = {}
         self.base_url = base_url
         self.qr_cache_path = qr_cache_path
         self.max_size = max_size
+        self.qr_image_path = qr_image_path
 
     def add(self, alias: str):
         try:
@@ -36,25 +37,26 @@ class QRCode:
             qrcode_image = Image.open(path)
             qrcode_image = qrcode_image.convert("RGBA")
 
-            sce_logo = Image.open("/app/assets/SCE_logo.png")
+            if self.qr_image_path is not None:
+                sce_logo = Image.open(self.qr_image_path)
 
-            qrcode_width, qrcode_height = qrcode_image.size
-            # Resize sce_logo to be 20% of the qr code's width and height
-            sce_logo_width = int(qrcode_width * 0.2)
-            sce_logo_height = int(qrcode_height * 0.2)
-            sce_logo = sce_logo.resize((sce_logo_width, sce_logo_height))
+                qrcode_width, qrcode_height = qrcode_image.size
+                # Resize sce_logo to be 20% of the qr code's width and height
+                sce_logo_width = int(qrcode_width * 0.2)
+                sce_logo_height = int(qrcode_height * 0.2)
+                sce_logo = sce_logo.resize((sce_logo_width, sce_logo_height))
 
-            # Calculate the coordinates for the logo to be centered on the QR Code
-            top_left_x = int((qrcode_width / 2) - (sce_logo_width / 2))
-            top_left_y = int((qrcode_height / 2) - (sce_logo_height / 2))
-            bottom_right_x = int((qrcode_width / 2) + (sce_logo_width / 2))
-            bottom_right_y = int((qrcode_height / 2) + (sce_logo_height / 2))
+                # Calculate the coordinates for the logo to be centered on the QR Code
+                top_left_x = int((qrcode_width / 2) - (sce_logo_width / 2))
+                top_left_y = int((qrcode_height / 2) - (sce_logo_height / 2))
+                bottom_right_x = int((qrcode_width / 2) + (sce_logo_width / 2))
+                bottom_right_y = int((qrcode_height / 2) + (sce_logo_height / 2))
 
-            box = [top_left_x, top_left_y, bottom_right_x, bottom_right_y]
-            # Place the logo in the center of the QR Code
-            qrcode_image.paste(sce_logo, box)
-            # Save the QR Code again after the logo has been added
-            qrcode_image.save(path, scale=10)
+                box = [top_left_x, top_left_y, bottom_right_x, bottom_right_y]
+                # Place the logo in the center of the QR Code
+                qrcode_image.paste(sce_logo, box)
+                # Save the QR Code again after the logo has been added
+                qrcode_image.save(path, scale=10)
 
             self.mapping[alias] = path
 
