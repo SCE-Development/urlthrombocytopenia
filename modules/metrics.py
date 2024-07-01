@@ -41,6 +41,11 @@ class Metrics(enum.Enum):
         "Number of stored QR Codes",
         prometheus_client.Gauge,
     )
+    QR_CODE_CACHE_SIZE_IN_BYTES = (
+        "qr_code_cache_size_in_bytes",
+        "Total file size in bytes for all stored QR Codes",
+        prometheus_client.Gauge,
+    )
 
     def __init__(self, title, description, prometheus_type, labels=()):
         # we use the above default value for labels because it matches what's used

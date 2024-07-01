@@ -22,6 +22,10 @@ class QRCode:
         try:
             if len(self.mapping) >= self.max_size:  # removes files if exceeds size
                 remove_alias, remove_path = self.mapping.popitem()
+                # Decrease the qr_code_cache_size_in_bytes custom prometheus metric by the file size of the QR Code that was removed
+                MetricsHandler.qr_code_cache_size_in_bytes.dec(
+                    os.path.getsize(remove_path)
+                )
                 os.remove(remove_path)
                 # Decrease the qr_code_cache_size custom prometheus metric by 1 after a QR Code is removed
                 MetricsHandler.qr_code_cache_size.dec(1)
@@ -61,6 +65,8 @@ class QRCode:
             qrcode_image.paste(sce_logo, box)
             # Save the QR Code again after the logo has been added
             qrcode_image.save(path, scale=10)
+            # Increase the qr_code_cache_size_in_bytes custom prometheus metric by the size of the newly created QR Code
+            MetricsHandler.qr_code_cache_size_in_bytes.inc(os.path.getsize(path))
             # Increase the qr_code_cache_size custom prometheus metric by 1 after a new QR Code is added
             MetricsHandler.qr_code_cache_size.inc()
 
@@ -82,6 +88,8 @@ class QRCode:
         if alias in self.mapping:
             self.mapping.pop(alias)
         if os.path.exists(path):
+            # Decrease the qr_code_cache_size_in_bytes custom prometheus metric by the file size of the QR Code that was removed
+            MetricsHandler.qr_code_cache_size_in_bytes.dec(os.path.getsize(path))
             os.remove(path)
             # Decrease the qr_code_cache_size custom prometheus metric by 1 after a QR Code is removed
             MetricsHandler.qr_code_cache_size.dec(1)
