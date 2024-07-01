@@ -19,13 +19,13 @@ class Metrics(enum.Enum):
         "http_code",
         "Count of each HTTP Response code",
         prometheus_client.Counter,
-        ['path', 'code'],
+        ["path", "code"],
     )
     CACHE_SIZE = (
         "cache_size",
         "Size of LRU cache for /find",
         prometheus_client.Gauge,
-    ) 
+    )
     CACHE_HITS = (
         "cache_hits",
         "Number of times cache is used",
@@ -35,6 +35,11 @@ class Metrics(enum.Enum):
         "cache_misses",
         "Number of times cahes is not used",
         prometheus_client.Counter,
+    )
+    QR_CODE_CACHE_SIZE = (
+        "qr_code_cache_size",
+        "Number of stored QR Codes",
+        prometheus_client.Gauge,
     )
 
     def __init__(self, title, description, prometheus_type, labels=()):
