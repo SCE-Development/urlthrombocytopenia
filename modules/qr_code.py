@@ -91,8 +91,8 @@ class QRCode:
             # Decrease the qr_code_cache_size_in_bytes custom prometheus metric by the file size of the QR Code that was removed
             MetricsHandler.qr_code_cache_size_in_bytes.dec(os.path.getsize(path))
             os.remove(path)
-            # Decrease the qr_code_cache_size custom prometheus metric by 1 after a QR Code is removed
-            MetricsHandler.qr_code_cache_size.dec(1)
+            # Set the qr_code_cache_size custom prometheus metric to the length of self.mapping after a QR Code is removed
+            MetricsHandler.qr_code_cache_size.set(len(self.mapping))
             logger.debug(f"removed qr code at {path} for alias {alias}")
 
     def clear(self):
