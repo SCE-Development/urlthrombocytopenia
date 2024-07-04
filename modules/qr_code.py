@@ -1,72 +1,43 @@
 import logging
 import os
 import uuid
-
-from PIL import Image
 import pyqrcode
 
 logger = logging.getLogger(__name__)
 
-
 class QRCode:
-    def __init__(self, base_url, qr_cache_path, max_size, qr_image_path = None) -> None:
+    def __init__(self, base_url, qr_folder_path, max_cache_size) -> None:
+
+        self.qr_folder_path = qr_folder_path
+        if not os.path.exists(self.qr_folder_path):
+            os.mkdir(self.qr_folder_path)
         self.mapping = {}
         self.base_url = base_url
-        self.qr_cache_path = qr_cache_path
-        self.max_size = max_size
-        self.qr_image_path = qr_image_path
+        self.max_cache_size = max_cache_size
 
     def add(self, alias: str):
         try:
-            if len(self.mapping) >= self.max_size:  # removes files if exceeds size
-                remove_alias, remove_path = self.mapping.popitem()
-                os.remove(remove_path)
-                logger.debug(
-                    f"Removed qrcode with alias: {remove_alias} to free space."
-                )
+            # remove files to remain under cache size
+            if len(self.mapping) >= self.max_cache_size:  
+                removed_qr_path = self.mapping.popitem()
+                os.remove(removed_qr_path)
 
-            url = os.path.join(self.base_url, alias)
-            path = os.path.join(self.qr_cache_path, str(uuid.uuid4()) + ".png")
+            # sets the name of the qr code file to a uuid string
+            qr_url = os.path.join(self.base_url, alias)
+            qr_path = os.path.join(self.qr_folder_path, str(uuid.uuid4()) + ".png")
 
-            # Create a QR Code with high error tolerance (30%) to accommodate for the logo placed in the center
-            qrcode = pyqrcode.create(url, error="H")
-            # Save the generated QR Code
-            qrcode.png(path, scale=10)
+            qrcode = pyqrcode.create(qr_url)
+            qrcode.png(qr_path, scale=10)
+            
+            self.mapping[alias] = qr_path
 
-            # Open the saved QR Code to add the logo in the center
-            qrcode_image = Image.open(path)
-            qrcode_image = qrcode_image.convert("RGBA")
-
-            if self.qr_image_path is not None:
-                sce_logo = Image.open(self.qr_image_path)
-
-                qrcode_width, qrcode_height = qrcode_image.size
-                # Resize sce_logo to be 20% of the qr code's width and height
-                sce_logo_width = int(qrcode_width * 0.2)
-                sce_logo_height = int(qrcode_height * 0.2)
-                sce_logo = sce_logo.resize((sce_logo_width, sce_logo_height))
-
-                # Calculate the coordinates for the logo to be centered on the QR Code
-                top_left_x = int((qrcode_width / 2) - (sce_logo_width / 2))
-                top_left_y = int((qrcode_height / 2) - (sce_logo_height / 2))
-                bottom_right_x = int((qrcode_width / 2) + (sce_logo_width / 2))
-                bottom_right_y = int((qrcode_height / 2) + (sce_logo_height / 2))
-
-                box = [top_left_x, top_left_y, bottom_right_x, bottom_right_y]
-                # Place the logo in the center of the QR Code
-                qrcode_image.paste(sce_logo, box)
-                # Save the QR Code again after the logo has been added
-                qrcode_image.save(path, scale=10)
-
-            self.mapping[alias] = path
-
-            return path
+            return qr_path
         except FileNotFoundError:
-            logger.exception(f"Could not find folder {self.qr_cache_path}:")
+            logger.exception(f"Could not find folder {self.qr_folder_path}:")
         except OSError:
-            logger.exception(f"Error occured when handling files:")
+            logger.exception(f"Error occurred when handling files:")
         except Exception:
-            logger.exception(f"An unexpected error occured")
+            logger.exception(f"An unexpected error occurred")
 
     def find(self, alias: str):
         return self.mapping.get(alias)

@@ -18,7 +18,6 @@ from modules.sqlite_helpers import increment_used_column
 from modules.cache import Cache
 from modules.qr_code import QRCode
 
-
 app = FastAPI()
 args = get_args()
 alias_queue = Queue()
@@ -37,9 +36,9 @@ DATABASE_FILE = args.database_file_path
 sqlite_helpers.maybe_create_table(DATABASE_FILE)
 qr_code_cache = QRCode(
   args.qr_code_base_url,
-  args.qr_code_cache_path,
+  args.qr_code_folder_path,
   args.qr_code_cache_size,
-  args.qr_code_center_image_path
+  
 )
 
 
@@ -147,19 +146,23 @@ async def delete_url(alias: str):
 async def qr(alias: str):
     logging.debug(f"/qr code generation called with alias: {alias}")
     with MetricsHandler.query_time.labels("qr").time():
-        maybe_image_data = qr_code_cache.find(alias)
-        if maybe_image_data is not None:
+        maybe_image = qr_code_cache.find(alias)
+
+        if maybe_image is not None:
             return FileResponse(
-            maybe_image_data,
+            maybe_image,
             media_type='image/jpeg',
             )
         
+        # if maybe_image is null, check if it exists in sqlite
+        # if it doesnt exist in sqlite, return 404 to the user
+
         url_output = sqlite_helpers.get_url(DATABASE_FILE, alias)
         if url_output is None:
             raise HTTPException(status_code=HttpResponse.NOT_FOUND.code)
-        image_data = qr_code_cache.add(alias)
+        qr_code_path = qr_code_cache.add(alias)
         return FileResponse(
-            image_data,
+            qr_code_path,
             media_type='image/jpeg',
         )
 
@@ -178,6 +181,7 @@ def get_metrics():
         content=prometheus_client.generate_latest(),
     )
 
+# clean up qr-codes when the server shuts down 
 @app.on_event("shutdown")
 def signal_handler():
     qr_code_cache.clear()
