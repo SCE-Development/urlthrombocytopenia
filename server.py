@@ -39,7 +39,8 @@ qr_code_cache = QRCode(
   args.qr_code_base_url,
   args.qr_code_cache_path,
   args.qr_code_cache_size,
-  args.qr_code_center_image_path
+  args.qr_code_center_image_path,
+  args.qr_code_cache_state_file,
 )
 
 
@@ -178,9 +179,10 @@ def get_metrics():
         content=prometheus_client.generate_latest(),
     )
 
+# write qr-codes to json file on shutdown
 @app.on_event("shutdown")
 def signal_handler():
-    qr_code_cache.clear()
+    qr_code_cache.write_cache_state()
 
 logging.Formatter.converter = time.gmtime
 
