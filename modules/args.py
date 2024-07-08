@@ -39,7 +39,7 @@ def get_args():
         help="number of url redirects to store in memory. defaults to 100"
     )
     parser.add_argument(
-        "--qr-code-folder-path",
+        "--qr-code-cache-path",
         required=True,
         help="the folder to store generated url files"
     )
@@ -58,6 +58,11 @@ def get_args():
         "--qr-code-center-image-path",
         default=None,
         help="the base url path for the center image in qr code"
+    )
+    parser.add_argument(
+        "--cache-state-file",
+        required=True,
+        help="the JSON file where the cache will map to"
     )
     
     return parser.parse_args()
