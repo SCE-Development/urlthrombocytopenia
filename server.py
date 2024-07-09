@@ -179,10 +179,13 @@ def get_metrics():
         content=prometheus_client.generate_latest(),
     )
 
-# write qr-codes to json file on shutdown
+# write qr-codes to json file on shutdown if cache state file arg is specified
 @app.on_event("shutdown")
 def signal_handler():
-    qr_code_cache.write_cache_state()
+    if args.qr_code_cache_state_file is None:
+        qr_code_cache.clear()
+    else:
+        qr_code_cache.write_cache_state()
 
 logging.Formatter.converter = time.gmtime
 

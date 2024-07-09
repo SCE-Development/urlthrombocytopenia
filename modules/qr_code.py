@@ -21,7 +21,8 @@ class QRCode:
         self.qr_image_path = qr_image_path
 
         # read from JSON file to initialize cache at server startup
-        self.read_cache_state()
+        if self.cache_state_file is not None:
+            self.read_cache_state()
 
     def add(self, alias: str):
         try:

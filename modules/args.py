@@ -60,8 +60,8 @@ def get_args():
         help="the base url path for the center image in qr code"
     )
     parser.add_argument(
-        "--cache-state-file",
-        required=True,
-        help="the JSON file where the cache will map to"
+        "--qr-code-cache-state-file",
+        default=None,
+        help="the JSON file where the cache will map to. If not specified, the qr-code cache will be cleared",
     )
     return parser.parse_args()
