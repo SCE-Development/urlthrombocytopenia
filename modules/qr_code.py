@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class QRCode:
-    def __init__(self, base_url, qr_cache_path, max_size, cache_state_file, qr_image_path = None) -> None:
+    def __init__(self, base_url, qr_cache_path, max_size, cache_state_file = None, qr_image_path = None) -> None:
         self.mapping = {}
         self.base_url = base_url
         self.qr_cache_path = qr_cache_path
