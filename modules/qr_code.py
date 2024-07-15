@@ -127,7 +127,5 @@ class QRCode:
         try:
             with open(self.cache_state_file, 'w') as json_file:
                 json.dump(self.mapping, json_file)
-        except FileNotFoundError:
-            logger.exception(f"Could not find cache state file: {self.cache_state_file}")
         except Exception:
             logger.exception(f"An unexpected error occurred while saving cache state file: {self.cache_state_file}")

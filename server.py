@@ -183,9 +183,9 @@ def get_metrics():
 @app.on_event("shutdown")
 def signal_handler():
     if args.qr_code_cache_state_file is None:
-        qr_code_cache.clear()
-    else:
-        qr_code_cache.write_cache_state()
+        return qr_code_cache.clear()
+    
+    qr_code_cache.write_cache_state()
 
 logging.Formatter.converter = time.gmtime
 

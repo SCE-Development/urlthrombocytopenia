@@ -61,7 +61,6 @@ def get_args():
     )
     parser.add_argument(
         "--qr-code-cache-state-file",
-        default=None,
         help="the JSON file where the cache will map to. If not specified, the qr-code cache will be cleared",
     )
     return parser.parse_args()
