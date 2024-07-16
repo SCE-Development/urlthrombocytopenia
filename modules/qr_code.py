@@ -26,7 +26,6 @@ class QRCode:
         self.max_size = max_size
         self.cache_state_file = cache_state_file
         self.qr_image_path = qr_image_path
-        logging.error(f"wow guys {(self.cache_state_file, self.qr_image_path)}")
 
         # read from JSON file to initialize cache at server startup
         if self.cache_state_file is not None:
