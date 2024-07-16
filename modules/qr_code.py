@@ -12,7 +12,14 @@ logger = logging.getLogger(__name__)
 
 
 class QRCode:
-    def __init__(self, base_url, qr_cache_path, max_size, cache_state_file = None, qr_image_path = None) -> None:
+    def __init__(
+        self,
+        base_url,
+        qr_cache_path,
+        max_size,
+        cache_state_file=None,
+        qr_image_path=None,
+    ) -> None:
         self.mapping = {}
         self.base_url = base_url
         self.qr_cache_path = qr_cache_path
@@ -48,6 +55,7 @@ class QRCode:
             qrcode.png(path, scale=10)
 
             # Open the saved QR Code to add the logo in the center
+            logger.info(f"path city {(path, self.qr_cache_path)}")
             qrcode_image = Image.open(path)
             qrcode_image = qrcode_image.convert("RGBA")
 
@@ -82,9 +90,9 @@ class QRCode:
         except FileNotFoundError:
             logger.exception(f"Could not find folder {self.qr_cache_path}:")
         except OSError:
-            logger.exception(f"Error occured when handling files:")
+            logger.exception("Error occured when handling files:")
         except Exception:
-            logger.exception(f"An unexpected error occured")
+            logger.exception("An unexpected error occured")
 
     def find(self, alias: str):
         return self.mapping.get(alias)
@@ -113,19 +121,27 @@ class QRCode:
     # when server starts, load the cache state from JSON file
     def read_cache_state(self):
         try:
-            with open(self.cache_state_file, 'r') as json_file:
+            with open(self.cache_state_file, "r") as json_file:
                 self.mapping = json.load(json_file)
         except FileNotFoundError:
-                logger.exception(f"Could not find cache state file: {self.cache_state_file}")
+            logger.exception(
+                f"Could not find cache state file: {self.cache_state_file}"
+            )
         except json.JSONDecodeError:
-                logger.exception(f"Error when reading JSON from cache state file: {self.cache_state_file}")
+            logger.exception(
+                f"Error when reading JSON from cache state file: {self.cache_state_file}"
+            )
         except Exception:
-                logger.exception(f"An unexpected error occurred while reading cache state file: {self.cache_state_file}")
+            logger.exception(
+                f"An unexpected error occurred while reading cache state file: {self.cache_state_file}"
+            )
 
     # when server shuts down, save the cache state to file
     def write_cache_state(self):
         try:
-            with open(self.cache_state_file, 'w') as json_file:
+            with open(self.cache_state_file, "w") as json_file:
                 json.dump(self.mapping, json_file)
         except Exception:
-            logger.exception(f"An unexpected error occurred while saving cache state file: {self.cache_state_file}")
+            logger.exception(
+                f"An unexpected error occurred while saving cache state file: {self.cache_state_file}"
+            )
