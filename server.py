@@ -36,11 +36,11 @@ cache = Cache(args.cache_size)
 DATABASE_FILE = args.database_file_path
 sqlite_helpers.maybe_create_table(DATABASE_FILE)
 qr_code_cache = QRCode(
-  args.qr_code_base_url,
-  args.qr_code_cache_path,
-  args.qr_code_cache_size,
-  args.qr_code_center_image_path,
-  args.qr_code_cache_state_file,
+  base_url=args.qr_code_base_url,
+  qr_cache_path=args.qr_code_cache_path,
+  max_size=args.qr_code_cache_size,
+  cache_state_file=args.qr_code_cache_state_file,
+  qr_image_path=args.qr_code_center_image_path,
 )
 
 
