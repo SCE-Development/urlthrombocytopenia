@@ -58,6 +58,7 @@ async def create_url(request: Request):
 
         # Assuming the user input an expiration_date, convert from EPOCH to DATETIME
         if expire_time is not None:
+            expire_time = expire_time / 1000
             expiration_object = datetime.fromtimestamp(expire_time)
             expiration_date = expiration_object.strftime('%Y-%m-%dT%H:%M:%S.%f')
 
