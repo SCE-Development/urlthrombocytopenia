@@ -36,10 +36,11 @@ cache = Cache(args.cache_size)
 DATABASE_FILE = args.database_file_path
 sqlite_helpers.maybe_create_table(DATABASE_FILE)
 qr_code_cache = QRCode(
-  args.qr_code_base_url,
-  args.qr_code_cache_path,
-  args.qr_code_cache_size,
-  args.qr_code_center_image_path
+  base_url=args.qr_code_base_url,
+  qr_cache_path=args.qr_code_cache_path,
+  max_size=args.qr_code_cache_size,
+  cache_state_file=args.qr_code_cache_state_file,
+  qr_image_path=args.qr_code_center_image_path,
 )
 
 
@@ -178,9 +179,13 @@ def get_metrics():
         content=prometheus_client.generate_latest(),
     )
 
+# write qr-codes to json file on shutdown if cache state file arg is specified
 @app.on_event("shutdown")
 def signal_handler():
-    qr_code_cache.clear()
+    if args.qr_code_cache_state_file is None:
+        return qr_code_cache.clear()
+    
+    qr_code_cache.write_cache_state()
 
 logging.Formatter.converter = time.gmtime
 

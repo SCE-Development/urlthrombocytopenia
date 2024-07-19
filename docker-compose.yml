@@ -8,6 +8,7 @@ services:
     command:
       - --database-file-path=/tmp/urldatabase.db
       - --qr-code-cache-path=/tmp/
+      - --qr-code-cache-state-file=/tmp/cleezy-state
       - --qr-code-base-url=https://sce.sjsu.edu/s
       - --qr-code-center-image-path=/app/assets/SCE_logo.png
       - -vvv
