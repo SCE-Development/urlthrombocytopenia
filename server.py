@@ -131,17 +131,28 @@ async def get_url(alias: str):
     alias_queue.put(alias)
     return RedirectResponse(url_output)
 
-
 @app.post("/delete/{alias}")
 async def delete_url(alias: str):
     logging.debug(f"/delete called with alias: {alias}")
-    with MetricsHandler.query_time.labels("delete").time():
-        if sqlite_helpers.delete_url(DATABASE_FILE, alias):
-            qr_code_cache.delete(alias)
-            cache.delete(alias)
-            return {"message": "URL deleted successfully"}
-        else:
-            raise HTTPException(status_code=HttpResponse.NOT_FOUND.code)
+    try:
+        with MetricsHandler.query_time.labels("delete").time():
+            if sqlite_helpers.delete_url(DATABASE_FILE, alias):
+                try: # URL deleted, now attempt the associated data
+                    qr_code_cache.delete(alias)
+                except Exception as e:
+                    logging.error(f"Error deleting QR code for {alias}: {str(e)}")
+
+                try:
+                    cache.delete(alias)
+                except Exception as e:
+                    logging.error(f"Error deleting from cache for {alias}: {str(e)}") # log failure without raising exception
+
+                return {"message": "URL deleted successfully"}
+            else:
+                raise HTTPException(status_code=HttpResponse.NOT_FOUND.code)
+    except Exception as e:
+        logging.error(f"Unexpected error in delete_url for {alias}: {str(e)}")
+        raise HTTPException(status_code=HttpResponse.INTERNAL_SERVER_ERROR.code)
 
 @app.get("/qr/{alias}") 
 async def qr(alias: str):
