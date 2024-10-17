@@ -98,6 +98,9 @@ class QRCode:
 
     def delete(self, alias: str):
         path = self.mapping.get(alias)
+        if not path:
+            logging.debug(f"path not found in mapping for alias {alias}")
+            return None
         if alias in self.mapping:
             self.mapping.pop(alias)
         if os.path.exists(path):
