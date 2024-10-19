@@ -80,7 +80,7 @@ async def create_url(request: Request):
                     "url": urljson["url"],
                     "alias": alias,
                     "created_at": response,
-                    "expiration_date": response["expiration_date"],
+                    "expires_at": expiration_date,
                 }
             else:
                 raise HTTPException(status_code=HttpResponse.CONFLICT.code)
