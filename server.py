@@ -79,7 +79,7 @@ async def create_url(request: Request):
                 return {
                     "url": urljson["url"],
                     "alias": alias,
-                    "created_at": response["created_at"],
+                    "created_at": response,
                     "expiration_date": response["expiration_date"],
                 }
             else:
