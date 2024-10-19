@@ -68,12 +68,20 @@ async def create_url(request: Request):
                 alias = generate_alias(urljson["url"])
         if not alias.isalnum():
             raise ValueError("alias must only contain alphanumeric characters")
+        expiration_date = urljson.get("expiration_date")
 
         with MetricsHandler.query_time.labels("create").time():
-            response = sqlite_helpers.insert_url(DATABASE_FILE, urljson["url"], alias)
+            response = sqlite_helpers.insert_url(
+                DATABASE_FILE, urljson["url"], alias, expiration_date
+            )
             if response is not None:
                 MetricsHandler.url_count.inc(1)
-                return {"url": urljson["url"], "alias": alias, "created_at": response}
+                return {
+                    "url": urljson["url"],
+                    "alias": alias,
+                    "created_at": response["created_at"],
+                    "expiration_date": response["expiration_date"],
+                }
             else:
                 raise HTTPException(status_code=HttpResponse.CONFLICT.code)
     except KeyError:
