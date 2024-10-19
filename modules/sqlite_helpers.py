@@ -10,14 +10,15 @@ def maybe_create_table(sqlite_file: str) -> bool:
     db = sqlite3.connect(sqlite_file)
     cursor = db.cursor()
 
-    try :
+    try:
         create_table_query = """
         CREATE TABLE IF NOT EXISTS urls (
             id INTEGER PRIMARY KEY, 
             url TEXT NOT NULL, 
             alias TEXT NOT NULL, 
             created_at DATETIME NOT NULL,
-            used INTEGER DEFAULT 1);
+            used INTEGER DEFAULT 1,
+            expires_at DATETIME DEFAULT NULL);
         """
 
         create_index_query = """
@@ -33,14 +34,16 @@ def maybe_create_table(sqlite_file: str) -> bool:
         logger.exception("Unable to create urls table")
         return False
 
-def insert_url(sqlite_file: str, url: str, alias: str):
+
+def insert_url(sqlite_file: str, url: str, alias: str, expiration_date: int):
     db = sqlite3.connect(sqlite_file)
     cursor = db.cursor()
     timestamp = datetime.now()
-
+    if expiration_date is not None:
+        expiration_date = datetime.fromtimestamp(expiration_date)
     try:
-        sql = "INSERT INTO urls(url, alias, created_at) VALUES (?, ?, ?)"
-        val = (url, alias, timestamp)
+        sql = "INSERT INTO urls(url, alias, created_at, expires_at) VALUES (?, ?, ?, ?)"
+        val = (url, alias, timestamp, expiration_date)
         cursor.execute(sql, val)
         db.commit()
         return timestamp
