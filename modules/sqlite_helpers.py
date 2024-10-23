@@ -130,8 +130,6 @@ def maybe_delete_expired_url(sqlite_file, sqlite_row) -> bool: #returns True if 
     if sqlite_row[5] is not None:
         expiration_datetime_str = sqlite_row[5].split(".")[0]
         expiration_datetime = datetime.strptime(expiration_datetime_str, "%Y-%m-%d %H:%M:%S")
-        if expiration_datetime < datetime.now():
-            logger.debug("expired url was accessed")
 
     if result_datetime < year_ago_date or (expiration_datetime is not None and expiration_datetime < datetime.now()):
         sql = "DELETE FROM urls WHERE alias = ?"
