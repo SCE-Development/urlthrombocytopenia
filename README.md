@@ -36,3 +36,17 @@ Open http://localhost:8000/list in the browser
 ### To delete a URL
 - send HTTP POST request to http://localhost:8000/delete/myurl
 - verify the url was deleted by opening http://localhost:8000/list in the browser
+
+## SQLite Migrations
+If you have an existing database and want to add a column, see below
+```sh
+docker exec -it cleezy-app /bin/bash
+
+apt update
+
+apt install -y sqlite3
+
+# for example adding a new expires_at column
+ALTER TABLE urls
+ADD COLUMN expires_at DATETIME DEFAULT NULL;
+```
