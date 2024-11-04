@@ -122,13 +122,9 @@ def maybe_delete_expired_url(sqlite_file, sqlite_row) -> bool: #returns True if 
     db = sqlite3.connect(sqlite_file)
     cursor = db.cursor()
 
-    year_ago_date = datetime.now() - timedelta(days=365)
-    result_datetime_str = sqlite_row[3].split(".")[0]  # Remove fractional seconds
-    result_datetime = datetime.strptime(result_datetime_str, "%Y-%m-%d %H:%M:%S")
-
     expiration_datetime = None
+    # sqlite_row[5] represents the expiration datetime e.g., "2024-11-04 18:05:24.006593"
     if sqlite_row[5] is not None:
-        expiration_datetime_str = sqlite_row[5].split(".")[0]
         expiration_datetime = datetime.strptime(sqlite_row[5], "%Y-%m-%d %H:%M:%S.%f")
 
     if expiration_datetime is not None and expiration_datetime < datetime.now():
