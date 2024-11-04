@@ -40,7 +40,7 @@ def insert_url(sqlite_file: str, url: str, alias: str, expiration_date: int):
     cursor = db.cursor()
     timestamp = datetime.now()
     if expiration_date is not None:
-        expiration_date = datetime.fromtimestamp(expiration_date)
+        expiration_date = datetime.fromisoformat(expiration_date)
     try:
         sql = "INSERT INTO urls(url, alias, created_at, expires_at) VALUES (?, ?, ?, ?)"
         val = (url, alias, timestamp, expiration_date)
@@ -122,10 +122,12 @@ def maybe_delete_expired_url(sqlite_file, sqlite_row) -> bool: #returns True if 
     db = sqlite3.connect(sqlite_file)
     cursor = db.cursor()
 
-    year_ago_date = datetime.now() - timedelta(days=365)
-    result_datetime_str = sqlite_row[3].split(".")[0]  # Remove fractional seconds
-    result_datetime = datetime.strptime(result_datetime_str, "%Y-%m-%d %H:%M:%S")
-    if result_datetime < year_ago_date:
+    expiration_datetime = None
+    # sqlite_row[5] represents the expiration datetime e.g., "2024-11-04 18:05:24.006593"
+    if sqlite_row[5] is not None:
+        expiration_datetime = datetime.strptime(sqlite_row[5], "%Y-%m-%d %H:%M:%S.%f")
+
+    if expiration_datetime is not None and expiration_datetime < datetime.now():
         sql = "DELETE FROM urls WHERE alias = ?"
         cursor.execute(sql, (sqlite_row[2], ))
         db.commit()
