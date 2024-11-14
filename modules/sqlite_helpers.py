@@ -8,7 +8,7 @@ ROWS_PER_PAGE = 25
 
 logger = logging.getLogger(__name__)
 args = get_args()
-expiration_date_timezone = args.expiration_date_timezone
+expiration_date_timezone = ZoneInfo(args.expiration_date_timezone)
 
 def maybe_create_table(sqlite_file: str) -> bool:
     db = sqlite3.connect(sqlite_file)
@@ -126,15 +126,13 @@ def maybe_delete_expired_url(sqlite_file, sqlite_row) -> bool: #returns True if 
     db = sqlite3.connect(sqlite_file)
     cursor = db.cursor()
 
-    tz = ZoneInfo(expiration_date_timezone)
-
     expiration_datetime = None
     # sqlite_row[5] represents the expiration datetime e.g., "2024-11-04 18:05:24.006593"
     if sqlite_row[5] is not None:
         expiration_datetime = datetime.strptime(sqlite_row[5], "%Y-%m-%d %H:%M:%S.%f")
-        expiration_datetime = expiration_datetime.replace(tzinfo=tz)
+        expiration_datetime = expiration_datetime.replace(tzinfo=expiration_date_timezone)
 
-    now = datetime.now(tz)
+    now = datetime.now(expiration_date_timezone)
     if expiration_datetime is not None and expiration_datetime < now:
         sql = "DELETE FROM urls WHERE alias = ?"
         cursor.execute(sql, (sqlite_row[2], ))
