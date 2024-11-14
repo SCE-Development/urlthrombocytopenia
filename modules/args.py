@@ -63,4 +63,9 @@ def get_args():
         "--qr-code-cache-state-file",
         help="the JSON file where the cache will map to. If not specified, the qr-code cache will be cleared",
     )
+    parser.add_argument(
+        "--expiration-date-timezone",
+        default="America/Los_Angeles",
+        help="the timezone that url expiration checks will use. defaults to America/Los_Angeles"
+    )
     return parser.parse_args()
