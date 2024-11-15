@@ -1,10 +1,14 @@
 import sqlite3
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 import logging
+from modules.args import get_args
 
 ROWS_PER_PAGE = 25
 
 logger = logging.getLogger(__name__)
+args = get_args()
+expiration_date_timezone = ZoneInfo(args.expiration_date_timezone)
 
 def maybe_create_table(sqlite_file: str) -> bool:
     db = sqlite3.connect(sqlite_file)
@@ -35,7 +39,7 @@ def maybe_create_table(sqlite_file: str) -> bool:
         return False
 
 
-def insert_url(sqlite_file: str, url: str, alias: str, expiration_date: int):
+def insert_url(sqlite_file: str, url: str, alias: str, expiration_date: str):
     db = sqlite3.connect(sqlite_file)
     cursor = db.cursor()
     timestamp = datetime.now()
@@ -126,8 +130,10 @@ def maybe_delete_expired_url(sqlite_file, sqlite_row) -> bool: #returns True if 
     # sqlite_row[5] represents the expiration datetime e.g., "2024-11-04 18:05:24.006593"
     if sqlite_row[5] is not None:
         expiration_datetime = datetime.strptime(sqlite_row[5], "%Y-%m-%d %H:%M:%S.%f")
+        expiration_datetime = expiration_datetime.replace(tzinfo=expiration_date_timezone)
 
-    if expiration_datetime is not None and expiration_datetime < datetime.now():
+    now = datetime.now(expiration_date_timezone)
+    if expiration_datetime is not None and expiration_datetime < now:
         sql = "DELETE FROM urls WHERE alias = ?"
         cursor.execute(sql, (sqlite_row[2], ))
         db.commit()
