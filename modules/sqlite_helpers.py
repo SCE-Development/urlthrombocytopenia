@@ -84,6 +84,7 @@ def get_urls(sqlite_file, page=0, search=None, sort_by="created_at", order="DESC
                 "alias": row[2],
                 "created_at": row[3],
                 "used": row[4],
+                "expires_at": row[5]
             }
             url_array.append(url_data)
         except KeyError:
@@ -122,19 +123,24 @@ def delete_url(sqlite_file: str, alias: str): #delete entry in the database from
         logger.exception("Deleting url had an error")
         return False
     
-def maybe_delete_expired_url(sqlite_file, sqlite_row) -> bool: #returns True if url expired and deleted, otherwise False
+def maybe_delete_expired_url(sqlite_file, sqlite_row) -> bool:
     db = sqlite3.connect(sqlite_file)
     cursor = db.cursor()
 
     expiration_datetime = None
     # sqlite_row[5] represents the expiration datetime e.g., "2024-11-04 18:05:24.006593"
     if sqlite_row[5] is not None:
-        expiration_datetime = datetime.strptime(sqlite_row[5], "%Y-%m-%d %H:%M:%S.%f")
+        try:
+            # First try parsing with microseconds
+            expiration_datetime = datetime.strptime(sqlite_row[5], "%Y-%m-%d %H:%M:%S.%f")
+        except ValueError:
+            # If it fails, parse without microseconds
+            expiration_datetime = datetime.strptime(sqlite_row[5], "%Y-%m-%d %H:%M:%S")
         expiration_datetime = expiration_datetime.replace(tzinfo=expiration_date_timezone)
 
     now = datetime.now(expiration_date_timezone)
     if expiration_datetime is not None and expiration_datetime < now:
-        sql = "DELETE FROM urls WHERE alias = ?"
+        sql = "DELETE FROM urls WHERE alias = ?" 
         cursor.execute(sql, (sqlite_row[2], ))
         db.commit()
         return True
